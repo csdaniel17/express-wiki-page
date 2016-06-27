@@ -1,6 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var fs = require('fs');
+// var fsAccess = require('fs-access');
 
 var app = express();
 
@@ -13,9 +14,24 @@ app.get('/', function(request, response) {
 
 app.get('/:pageName', function(request, response) {
   var title = request.params.pageName;
-  response.render('placeholder.hbs', {
-    title: title
+  var filename = 'pages/' + title + '.txt';
+  console.log(filename);
+  fs.readFile(filename, function(err, data) {
+    if (err) {
+      response.render('placeholder.hbs', {
+        title: title
+      });
+      return;
+    }
+    var content = data.toString();
+    console.log(content);
+    response.render('page.hbs', {
+      title: title,
+      content: content
+    });
   });
+
+
 });
 
 app.get('/:pageName/edit', function(request, response) {
