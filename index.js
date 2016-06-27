@@ -3,6 +3,7 @@ var bodyParser = require('body-parser');
 var fs = require('fs');
 var fsAccess = require('fs-access');
 var wikiLinkify = require('wiki-linkify');
+var marked = require('marked');
 
 var app = express();
 
@@ -15,7 +16,7 @@ app.get('/', function(request, response) {
 
 app.get('/:pageName', function(request, response) {
   var pageName = request.params.pageName;
-  var filename = 'pages/' + pageName + '.txt';
+  var filename = 'pages/' + pageName + '.md';
   console.log(filename);
 
   fs.access(filename, fs.R_OK, function(err) {
@@ -65,7 +66,7 @@ app.get('/:pageName', function(request, response) {
 
 app.get('/:pageName/edit', function(request, response) {
   var pageName = request.params.pageName;
-  var filename = 'pages/' + pageName + '.txt';
+  var filename = 'pages/' + pageName + '.md';
   fs.readFile(filename, function(err, data) {
     if (err) {
       console.log('error');
@@ -88,8 +89,9 @@ app.get('/:pageName/edit', function(request, response) {
 app.post('/:pageName/save', function(request, response) {
   var pageName = request.params.pageName;
   var content = request.body.content;
-  var filename = 'pages/' + pageName + '.txt';
-  fs.writeFile(filename, content, function(err) {
+  var mdContent = marked(content);
+  var filename = 'pages/' + pageName + '.md';
+  fs.writeFile(filename, mdContent, function(err) {
     response.redirect('/' + pageName);
   });
 });
