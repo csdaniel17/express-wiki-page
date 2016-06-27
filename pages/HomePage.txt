@@ -1,1 +1,5 @@
-test
+Hello, welcome to our Wiki page! This page was created by student of DigitalCrafts!
+
+Here is AnotherPage we made.
+
+Checkout the ApplePage.
