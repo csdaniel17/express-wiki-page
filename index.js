@@ -14,6 +14,28 @@ app.get('/', function(request, response) {
   response.redirect('/HomePage');
 });
 
+app.get('/AllPages', function(request, response) {
+  var pageName = request.params.pageName;
+  var filename = 'pages/' + pageName + '.md';
+  // var filename = 'pages/AllPages.md';
+  console.log('filename line 51 is: ', filename);
+  fs.readFile(filename, function(err, data) {
+    if (err) {
+      console.log('error on all pages file');
+      response.statusCode = 500;
+      response.send('Sorry, problem reading the file.');
+      return;
+    }
+    var content = data.toString();
+    console.log('line 59: ', content);
+    response.render('allpages.hbs', {
+      title: pageName,
+      content: content,
+      pageName: pageName
+    });
+  });
+});
+
 app.get('/:pageName', function(request, response) {
   var pageName = request.params.pageName;
   var filename = 'pages/' + pageName + '.md';
@@ -45,25 +67,8 @@ app.get('/:pageName', function(request, response) {
   });
 });
 
-app.get('/AllPages', function(request, response) {
-  var pageName = request.params.pageName;
-  var filename = 'pages/' + pageName + '.md';
-  fs.readFile(filename, function(err, data) {
-    if (err) {
-      console.log('error on all pages file');
-      response.statusCode = 500;
-      response.send('Sorry, problem reading the file.');
-      return;
-    }
-    var content = buffer.toString();
-    response.render('allpages.hbs', {
-      title: pageName,
-      content: content
-    });
-  });
-});
-
 app.get('/:pageName/edit', function(request, response) {
+  //is user logged in? - if no, make sure he's logged in - redirect to log in page
   var pageName = request.params.pageName;
   var filename = 'pages/' + pageName + '.md';
   fs.readFile(filename, function(err, data) {
@@ -86,6 +91,7 @@ app.get('/:pageName/edit', function(request, response) {
 });
 
 app.post('/:pageName/save', function(request, response) {
+  //is user logged in? - if no, make sure he's logged in - redirect to log in page
   var pageName = request.params.pageName;
   var content = request.body.content;
   var filename = 'pages/' + pageName + '.md';
