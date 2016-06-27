@@ -1,7 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var fs = require('fs');
-// var fsAccess = require('fs-access');
+var fsAccess = require('fs-access');
 var wikiLinkify = require('wiki-linkify');
 
 var app = express();
@@ -14,25 +14,52 @@ app.get('/', function(request, response) {
 });
 
 app.get('/:pageName', function(request, response) {
-  var title = request.params.pageName;
-  var filename = 'pages/' + title + '.txt';
+  var pageName = request.params.pageName;
+  var filename = 'pages/' + pageName + '.txt';
   console.log(filename);
-  fs.readFile(filename, function(err, data) {
+
+  fs.access(filename, fs.R_OK, function(err) {
     if (err) {
+      //cannot read - render placeholder
       response.render('placeholder.hbs', {
-        title: title
+        title: pageName
       });
-      return;
+    } else {
+      //read contents and render to page
+      fs.readFile(filename, function(err, buffer) {
+        if (err) {
+          response.statusCode = 500;
+          response.send('Sorry, problem reading the file.');
+          return;
+        }
+        var content = buffer.toString();
+        response.render('page.hbs', {
+          title: pageName,
+          content: wikiLinkify(content),
+          pageName: pageName
+        });
+      });
     }
-    var content = data.toString();
-    console.log(content);
-    var wikiContent = wikiLinkify(content);
-    console.log(wikiContent);
-    response.render('page.hbs', {
-      title: title,
-      content: wikiContent
-    });
   });
+
+  // fs.readFile(filename, function(err, data) {
+  //   if (err) {
+  //     response.render('placeholder.hbs', {
+  //       title: pageName
+  //     });
+  //     return;
+  //   }
+  //   var content = data.toString();
+  //   console.log(content);
+  //   var wikiContent = wikiLinkify(content);
+  //   console.log(wikiContent);
+  //   response.render('page.hbs', {
+  //     title: pageName,
+  //     content: wikiContent
+  //   });
+  // });
+
+
 });
 
 
