@@ -34,35 +34,34 @@ app.get('/:pageName', function(request, response) {
           return;
         }
         var content = buffer.toString();
+        var wikiContent = wikiLinkify(content);
         response.render('page.hbs', {
           title: pageName,
-          content: wikiLinkify(content),
+          content: marked(wikiContent),
           pageName: pageName
         });
       });
     }
   });
-
-  // fs.readFile(filename, function(err, data) {
-  //   if (err) {
-  //     response.render('placeholder.hbs', {
-  //       title: pageName
-  //     });
-  //     return;
-  //   }
-  //   var content = data.toString();
-  //   console.log(content);
-  //   var wikiContent = wikiLinkify(content);
-  //   console.log(wikiContent);
-  //   response.render('page.hbs', {
-  //     title: pageName,
-  //     content: wikiContent
-  //   });
-  // });
-
-
 });
 
+app.get('/AllPages', function(request, response) {
+  var pageName = request.params.pageName;
+  var filename = 'pages/' + pageName + '.md';
+  fs.readFile(filename, function(err, data) {
+    if (err) {
+      console.log('error on all pages file');
+      response.statusCode = 500;
+      response.send('Sorry, problem reading the file.');
+      return;
+    }
+    var content = buffer.toString();
+    response.render('allpages.hbs', {
+      title: pageName,
+      content: content
+    });
+  });
+});
 
 app.get('/:pageName/edit', function(request, response) {
   var pageName = request.params.pageName;
@@ -89,9 +88,8 @@ app.get('/:pageName/edit', function(request, response) {
 app.post('/:pageName/save', function(request, response) {
   var pageName = request.params.pageName;
   var content = request.body.content;
-  var mdContent = marked(content);
   var filename = 'pages/' + pageName + '.md';
-  fs.writeFile(filename, mdContent, function(err) {
+  fs.writeFile(filename, content, function(err) {
     response.redirect('/' + pageName);
   });
 });
