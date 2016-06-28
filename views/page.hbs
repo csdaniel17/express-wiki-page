@@ -1,4 +1,6 @@
 <p>{{{content}}}</p>
-<!-- <hr> -->
-<!-- <a href="/HomePage">HomePage</a> -->
+<hr>
+{{#if user}}
+  <span>Welcome {{user}}!</span>
+{{/if}}
 <a href="/{{pageName}}/edit">Edit This Page</a>

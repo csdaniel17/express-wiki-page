@@ -16,113 +16,122 @@ app.use(session({
   }
 }));
 
-app.use(function(request, response, next) {
+app.use(function(req, res, next) {
   console.log('first');
-  console.log(request.method + ' ' + request.url);
-  fs.appendFile(logFile, request.method + ' ' + request.url + '\n');
+  console.log(req.method + ' ' + req.url);
+  fs.appendFile(logFile, req.method + ' ' + req.url + '\n');
   next();
 });
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.set('view engine', 'hbs');
 
-app.get('/', function(request, response) {
-  response.redirect('/HomePage');
+app.get('/', function(req, res) {
+  res.redirect('/HomePage');
 });
 
-app.get('/login', function(request, response) {
-  response.render('login.hbs');
+app.get('/login', function(req, res) {
+  res.render('login.hbs', {
+    title: 'Login'
+  });
 });
 
-app.post('/login-submit', function(request, response) {
-  var credentials = request.body;
+app.get('/logout', function(req, res) {
+  req.session.user = null;
+  res.redirect('/');
+});
+
+app.post('/login-submit', function(req, res) {
+  var credentials = req.body;
   console.log(credentials);
   if (credentials.username === 'Toby' && credentials.password === 'thepassword') {
-    request.session.user = credentials.username;
-    response.redirect(request.session.requestUrl);
+    //use session to remember user
+    req.session.user = credentials.username;
+    res.redirect(req.session.reqUrl);
   } else {
-    response.redirect('/login');
+    res.redirect('/login');
   }
 });
 
-function authRequired(request, response, next) {
-  if(!request.session.user) {
-    request.session.requestUrl = request.url;
-    response.redirect('/login');
+function authRequired(req, res, next) {
+  if(!req.session.user) {
+    req.session.reqUrl = req.url;
+    res.redirect('/login');
   } else {
     next();
   }
 }
 
-app.get('/AllPages', function(request, response) {
-  var pageName = request.params.pageName;
-  var filename = 'pages/' + pageName + '.md';
-  // var filename = 'pages/AllPages.md';
-  console.log('filename line 51 is: ', filename);
-  fs.readFile(filename, function(err, data) {
-    if (err) {
-      console.log('error on all pages file');
-      response.statusCode = 500;
-      response.send('Sorry, problem reading the file.');
-      return;
-    }
-    var content = data.toString();
-    console.log('line 59: ', content);
-    response.render('allpages.hbs', {
-      title: pageName,
-      content: content,
-      pageName: pageName
-    });
-  });
-});
+// app.get('/AllPages', function(req, res) {
+//   var pageName = req.params.pageName;
+//   var filename = 'pages/' + pageName + '.md';
+//   // var filename = 'pages/AllPages.md';
+//   console.log('filename line 51 is: ', filename);
+//   fs.readFile(filename, function(err, data) {
+//     if (err) {
+//       console.log('error on all pages file');
+//       res.statusCode = 500;
+//       res.send('Sorry, problem reading the file.');
+//       return;
+//     }
+//     var content = data.toString();
+//     console.log('line 59: ', content);
+//     res.render('allpages.hbs', {
+//       title: pageName,
+//       content: content,
+//       pageName: pageName
+//     });
+//   });
+// });
 
-app.get('/:pageName', function(request, response) {
-  var pageName = request.params.pageName;
+app.get('/:pageName', function(req, res) {
+  var pageName = req.params.pageName;
   var filename = 'pages/' + pageName + '.md';
   console.log(filename);
-
+  var user = req.session.user;
   fs.access(filename, fs.R_OK, function(err) {
     if (err) {
       //cannot read - render placeholder
-      response.render('placeholder.hbs', {
+      res.render('placeholder.hbs', {
         title: pageName
       });
     } else {
       //read contents and render to page
-      fs.readFile(filename, function(err, buffer) {
+      fs.readFile(filename, function(err, data) {
         if (err) {
-          response.statusCode = 500;
-          response.send('Sorry, problem reading the file.');
+          res.statusCode = 500;
+          res.send('Sorry, problem reading the file.');
           return;
         }
-        var content = buffer.toString();
+        var content = data.toString();
         var wikiContent = wikiLinkify(content);
-        response.render('page.hbs', {
+        res.render('page.hbs', {
           title: pageName,
           content: marked(wikiContent),
-          pageName: pageName
+          pageName: pageName,
+          user: user
         });
       });
     }
   });
 });
 
-app.get('/:pageName/edit', authRequired, function(request, response) {
+app.get('/:pageName/edit', authRequired, function(req, res) {
   //is user logged in? - if no, make sure he's logged in - redirect to log in page
-  var pageName = request.params.pageName;
+  var pageName = req.params.pageName;
   console.log(pageName);
   var filename = 'pages/' + pageName + '.md';
   fs.readFile(filename, function(err, data) {
     if (err) {
       console.log('error');
-      response.render('edit.hbs', {
+      res.render('edit.hbs', {
         title: 'Edit ' + pageName,
         pageName: pageName
       });
       return;
     }
     var content = data.toString();
-    response.render('edit.hbs', {
+    res.render('edit.hbs', {
       title: 'Edit ' + pageName,
       pageName: pageName,
       content: content
@@ -131,13 +140,13 @@ app.get('/:pageName/edit', authRequired, function(request, response) {
 
 });
 
-app.post('/:pageName/save', function(request, response) {
+app.post('/:pageName/save', authRequired, function(req, res) {
   //is user logged in? - if no, make sure he's logged in - redirect to log in page
-  var pageName = request.params.pageName;
-  var content = request.body.content;
+  var pageName = req.params.pageName;
+  var content = req.body.content;
   var filename = 'pages/' + pageName + '.md';
   fs.writeFile(filename, content, function(err) {
-    response.redirect('/' + pageName);
+    res.redirect('/' + pageName);
   });
 });
 
