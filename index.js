@@ -1,10 +1,13 @@
 var express = require('express');
 var bodyParser = require('body-parser');
-var fs = require('fs');
-var fsAccess = require('fs-access');
+// var fs = require('fs');
 var wikiLinkify = require('wiki-linkify');
 var marked = require('marked');
 var session = require('express-session');
+
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/wiki-db');
+var Page = require('./pageModel');
 
 var app = express();
 var logFile = 'pages/filelog.txt';
@@ -16,18 +19,22 @@ app.use(session({
   }
 }));
 
-app.use(function(req, res, next) {
-  console.log('first');
-  console.log(req.method + ' ' + req.url);
-  fs.appendFile(logFile, req.method + ' ' + req.url + '\n');
-  next();
-});
+// app.use(function(req, res, next) {
+//   console.log('first');
+//   console.log(req.method + ' ' + req.url);
+//   fs.appendFile(logFile, req.method + ' ' + req.url + '\n');
+//   next();
+// });
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.set('view engine', 'hbs');
 
 app.get('/', function(req, res) {
   res.redirect('/HomePage');
+});
+
+app.get('/favicon.ico', function(req, res) {
+  res.send('');
 });
 
 app.get('/login', function(req, res) {
@@ -89,31 +96,59 @@ app.get('/:pageName', function(req, res) {
   var filename = 'pages/' + pageName + '.md';
   console.log(filename);
   var user = req.session.user;
-  fs.access(filename, fs.R_OK, function(err) {
-    if (err) {
-      //cannot read - render placeholder
+
+  Page.findById(pageName, function(err, data) {
+    if (!data) {
+      console.log('line 103 error');
       res.render('placeholder.hbs', {
         title: pageName
       });
+      return;
     } else {
-      //read contents and render to page
-      fs.readFile(filename, function(err, data) {
-        if (err) {
-          res.statusCode = 500;
-          res.send('Sorry, problem reading the file.');
-          return;
-        }
-        var content = data.toString();
-        var wikiContent = wikiLinkify(content);
-        res.render('page.hbs', {
-          title: pageName,
-          content: marked(wikiContent),
-          pageName: pageName,
-          user: user
-        });
+      console.log('line 110: ', data.content);
+      var content = data.content;
+      var wikiContent = wikiLinkify(content);
+      console.log('before render');
+      res.render('page.hbs', {
+        title: pageName,
+        content: marked(wikiContent),
+        pageName: pageName,
+        user: user
       });
+      console.log('after render');
+      return;
     }
   });
+
+
+
+
+  //look for file
+  // fs.access(filename, fs.R_OK, function(err) {
+  //   if (err) {
+  //     //cannot read - render placeholder
+  //     res.render('placeholder.hbs', {
+  //       title: pageName
+  //     });
+  //   } else {
+  //     //read contents and render to page
+  //     fs.readFile(filename, function(err, data) {
+  //       if (err) {
+  //         res.statusCode = 500;
+  //         res.send('Sorry, problem reading the file.');
+  //         return;
+  //       }
+  //       var content = data.toString();
+  //       var wikiContent = wikiLinkify(content);
+  //       res.render('page.hbs', {
+  //         title: pageName,
+  //         content: marked(wikiContent),
+  //         pageName: pageName,
+  //         user: user
+  //       });
+  //     });
+  //   }
+  // });
 });
 
 app.get('/:pageName/edit', authRequired, function(req, res) {
@@ -121,22 +156,45 @@ app.get('/:pageName/edit', authRequired, function(req, res) {
   var pageName = req.params.pageName;
   console.log(pageName);
   var filename = 'pages/' + pageName + '.md';
-  fs.readFile(filename, function(err, data) {
-    if (err) {
-      console.log('error');
+
+  Page.findById(pageName, function(err, data) {
+    if (!data) {
+      console.log('line 164 error');
       res.render('edit.hbs', {
         title: 'Edit ' + pageName,
         pageName: pageName
       });
       return;
+    } else {
+      console.log('line 171: ', data.content);
+      var content = data.content;
+      var wikiContent = wikiLinkify(content);
+      res.render('edit.hbs', {
+        title: 'Edit ' + pageName,
+        pageName: pageName,
+        content: content
+      });
+      return;
     }
-    var content = data.toString();
-    res.render('edit.hbs', {
-      title: 'Edit ' + pageName,
-      pageName: pageName,
-      content: content
-    });
   });
+
+
+  // fs.readFile(filename, function(err, data) {
+  //   if (err) {
+  //     console.log('error');
+  //     res.render('edit.hbs', {
+  //       title: 'Edit ' + pageName,
+  //       pageName: pageName
+  //     });
+  //     return;
+  //   }
+  //   var content = data.toString();
+  //   res.render('edit.hbs', {
+  //     title: 'Edit ' + pageName,
+  //     pageName: pageName,
+  //     content: content
+  //   });
+  // });
 
 });
 
@@ -145,9 +203,26 @@ app.post('/:pageName/save', authRequired, function(req, res) {
   var pageName = req.params.pageName;
   var content = req.body.content;
   var filename = 'pages/' + pageName + '.md';
-  fs.writeFile(filename, content, function(err) {
-    res.redirect('/' + pageName);
-  });
+
+  Page.update(
+    { _id: pageName },
+    { content: content },
+    { upsert: true },
+    function(err, reply) {
+      if (err) {
+        console.log('line 215 error');
+        return;
+      }
+      console.log('upsert succeeded ', reply);
+    }
+  );
+
+  res.redirect('/' + pageName);
+
+
+  // fs.writeFile(filename, content, function(err) {
+  //   res.redirect('/' + pageName);
+  // });
 });
 
 app.listen(3000, function() {
