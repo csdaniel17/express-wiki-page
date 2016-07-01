@@ -119,43 +119,13 @@ app.get('/:pageName', function(req, res) {
       return;
     }
   });
-
-
-
-
-  //look for file
-  // fs.access(filename, fs.R_OK, function(err) {
-  //   if (err) {
-  //     //cannot read - render placeholder
-  //     res.render('placeholder.hbs', {
-  //       title: pageName
-  //     });
-  //   } else {
-  //     //read contents and render to page
-  //     fs.readFile(filename, function(err, data) {
-  //       if (err) {
-  //         res.statusCode = 500;
-  //         res.send('Sorry, problem reading the file.');
-  //         return;
-  //       }
-  //       var content = data.toString();
-  //       var wikiContent = wikiLinkify(content);
-  //       res.render('page.hbs', {
-  //         title: pageName,
-  //         content: marked(wikiContent),
-  //         pageName: pageName,
-  //         user: user
-  //       });
-  //     });
-  //   }
-  // });
 });
 
 app.get('/:pageName/edit', authRequired, function(req, res) {
   //is user logged in? - if no, make sure he's logged in - redirect to log in page
   var pageName = req.params.pageName;
   console.log(pageName);
-  var filename = 'pages/' + pageName + '.md';
+  // var filename = 'pages/' + pageName + '.md';
 
   Page.findById(pageName, function(err, data) {
     if (!data) {
@@ -177,25 +147,6 @@ app.get('/:pageName/edit', authRequired, function(req, res) {
       return;
     }
   });
-
-
-  // fs.readFile(filename, function(err, data) {
-  //   if (err) {
-  //     console.log('error');
-  //     res.render('edit.hbs', {
-  //       title: 'Edit ' + pageName,
-  //       pageName: pageName
-  //     });
-  //     return;
-  //   }
-  //   var content = data.toString();
-  //   res.render('edit.hbs', {
-  //     title: 'Edit ' + pageName,
-  //     pageName: pageName,
-  //     content: content
-  //   });
-  // });
-
 });
 
 app.post('/:pageName/save', authRequired, function(req, res) {
@@ -219,10 +170,6 @@ app.post('/:pageName/save', authRequired, function(req, res) {
 
   res.redirect('/' + pageName);
 
-
-  // fs.writeFile(filename, content, function(err) {
-  //   res.redirect('/' + pageName);
-  // });
 });
 
 app.listen(3000, function() {
